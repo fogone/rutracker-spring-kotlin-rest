@@ -1,0 +1,16 @@
+import:
+  ignoreStoredVersions: false
+  directory: D:\Torrents\rutracker-torrents
+  index: category_info.csv
+  # threads: 4
+  categoryBatchSize: 100
+  torrentBatchSize: 10000
+
+spring:
+  datasource:
+    username: sa
+    password:
+    # url: jdbc:h2:mem:torrents;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:D:/Work/projects/rutracker/torrents
+    driver-class-name: org.h2.Driver
+    # name: file:torrents
