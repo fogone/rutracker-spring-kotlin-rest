@@ -59,6 +59,20 @@
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
 
+        <resources>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>static/fonts/**</include>
+                </includes>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <artifactId>kotlin-maven-plugin</artifactId>

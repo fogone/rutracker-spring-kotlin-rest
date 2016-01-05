@@ -11,5 +11,5 @@ spring:
     username: sa
     password:
     # url: jdbc:h2:mem:torrents;DB_CLOSE_DELAY=-1
-    url: jdbc:h2:D:/Work/projects/rutracker/torrents
+    url: jdbc:h2:c:/Work/projects/rutracker/torrents
     driver-class-name: org.h2.Driver

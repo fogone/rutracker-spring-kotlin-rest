@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>RuTracker torrent search</title>
+
+    <link href="css/bootstrap.slate.min.css" rel="stylesheet">
+    <link href="css/main.css" rel="stylesheet">
+</head>
+<body>
+
+
+<div class="container center-block">
+
+    <div class="inner text-center">
+        <h1>Search your torrent.</h1>
+        <p class="lead">Enter part of torrent name and click search.</p>
+
+        <div class="row">
+            <div class="col-xs-2"></div>
+            <div class="col-xs-8">
+                <p class="input-group">
+                    <input type="text" class="form-control" id="search-text">
+                        <span class="input-group-btn">
+                            <button id="search-button" class="btn btn-default">Search</button>
+                        </span>
+                </p>
+            </div>
+            <div class="col-xs-2"></div>
+        </div>
+    </div>
+
+    <div id="search-result"></div>
+
+</div>
+
+<footer class="footer text-center">
+    <p>RuTracker torrent <a href="https://github.com/fogone/rutracker-spring-kotlin-rest">search</a>,
+        by <a href="https://github.com/fogone">fogone</a>.</p>
+</footer>
+
+
+<script src="js/jquery-2.1.4.js"></script>
+<script src="js/bootstrap.js"></script>
+<script>
+    function markLoading(id) {
+        var $item = $('#' + id);
+        $item.addClass("disabled");
+        $item.html("<span class='glyphicon glyphicon-refresh glyphicon-refresh-animate'/>");
+    }
+
+    function markLoadingComplete(id, text) {
+        var $item = $('#' + id);
+        $item.removeClass("disabled");
+        $item.html(text);
+    }
+
+    function createItemTemplate(categoryAndTorrents) {
+        var result = '<div class="panel panel-default">'+
+        '<div class="panel-heading"><h2>'+categoryAndTorrents.category.name+'</h2></div>' +
+        '<ul class="list-group">';
+
+        for(var i in categoryAndTorrents.torrents) {
+            var item = categoryAndTorrents.torrents[i];
+            result += '<li class="list-group-item"><a href="#">'+item.name+'</a><span class="badge">'+item.size+'</span></li>';
+        }
+
+        return result + '</ul></div>';
+    }
+
+    function createEmptyTemplate() {
+        return $('<div class="panel panel-default">'+
+                '<div class="panel-heading text-center"><h2>Nothing</h2></div>'+
+                '</div>');
+    }
+
+    $('#search-button').on("click", function () {
+        markLoading("search-button");
+        $.getJSON("/api/torrents?name=" + $('#search-text').val(), {}).done(function (response) {
+            if(response.length > 0) {
+                $('#search-result').html("");
+                for (var i in response) {
+                    $(createItemTemplate(response[i])).appendTo('#search-result');
+                }
+            } else {
+                $('#search-result').html(createEmptyTemplate());
+            }
+            markLoadingComplete("search-button", "Search");
+        });
+    });
+</script>
+</body>
+</html>

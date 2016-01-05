@@ -15,7 +15,7 @@ open class RestConfiguration {
             = CategoriesController(categoryRepository)
 
     @Bean
-    open fun torrentsController(torrentRepository: TorrentRepository):TorrentsController
-            = TorrentsController(torrentRepository)
+    open fun torrentsController(torrentRepository: TorrentRepository, categoryRepository: CategoryRepository):TorrentsController
+            = TorrentsController(torrentRepository, categoryRepository)
 
 }
