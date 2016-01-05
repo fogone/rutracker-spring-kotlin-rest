@@ -8,6 +8,13 @@ import ru.nobirds.rutracker.CategoryAndTorrents
 import ru.nobirds.rutracker.Torrent
 import ru.nobirds.rutracker.repository.CategoryRepository
 import ru.nobirds.rutracker.repository.TorrentRepository
+import kotlin.collections.asSequence
+import kotlin.collections.emptyList
+import kotlin.collections.map
+import kotlin.collections.sortedBy
+import kotlin.collections.toList
+import kotlin.sequences.groupBy
+import kotlin.text.isEmpty
 
 @RequestMapping("/api/torrents")
 class TorrentsController(val torrentRepository: TorrentRepository, val categoryRepository: CategoryRepository) {

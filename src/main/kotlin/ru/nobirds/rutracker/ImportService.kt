@@ -1,5 +1,6 @@
 package ru.nobirds.rutracker
 
+import org.slf4j.Logger
 import ru.nobirds.rutracker.configuration.ImportProperties
 import ru.nobirds.rutracker.repository.CategoryRepository
 import ru.nobirds.rutracker.repository.TorrentRepository
@@ -17,6 +18,21 @@ import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.annotation.PostConstruct
+import kotlin.collections.asSequence
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.component3
+import kotlin.collections.component4
+import kotlin.collections.component5
+import kotlin.collections.map
+import kotlin.sequences.filter
+import kotlin.sequences.forEach
+import kotlin.sequences.map
+import kotlin.sequences.maxBy
+import kotlin.sequences.toList
+import kotlin.text.matches
+import kotlin.text.toLong
+import kotlin.text.toRegex
 
 class ImportService(
         val importProperties: ImportProperties,
@@ -24,7 +40,7 @@ class ImportService(
         val torrentRepository: TorrentRepository,
         val versionRepository: VersionRepository) {
 
-    private val logger = logger()
+    private val logger:Logger = logger()
 
     private val versionRegex = "\\d+".toRegex()
 

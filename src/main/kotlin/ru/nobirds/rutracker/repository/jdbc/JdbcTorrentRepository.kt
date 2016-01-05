@@ -10,6 +10,11 @@ import ru.nobirds.rutracker.utils.SimpleJdbcBatcher
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import javax.annotation.PostConstruct
+import kotlin.collections.joinToString
+import kotlin.collections.map
+import kotlin.collections.toTypedArray
+import kotlin.text.split
+import kotlin.text.trim
 
 class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository {
     private val rowMapper = RowMapper { rs: ResultSet, rowNum: Int ->
@@ -35,7 +40,6 @@ class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository 
         createTable()
     }
 
-
     override fun add(torrent: Torrent) {
         batcher(1).add(torrent).flush()
     }
@@ -58,7 +62,13 @@ class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository 
     }
 
     override fun findByName(name: String): List<Torrent> {
-        return jdbcTemplate.query("SELECT id, category_id, hash, name, size, created FROM torrent WHERE name like ?", rowMapper, "%$name%")
+        val parts = name.split(" ")
+
+        val whereSql = parts.map { "UPPER(name) like UPPER(?)" }.joinToString(" AND ")
+
+        val parameters = parts.map { it.trim() }.map { "%$it%" }.toTypedArray()
+
+        return jdbcTemplate.query("SELECT id, category_id, hash, name, size, created FROM torrent WHERE $whereSql", rowMapper, *parameters)
     }
 
     override fun clear() {

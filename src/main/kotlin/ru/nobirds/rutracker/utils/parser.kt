@@ -5,6 +5,8 @@ import java.io.Closeable
 import java.io.Reader
 import java.nio.charset.MalformedInputException
 import java.util.ArrayList
+import kotlin.collections.AbstractIterator
+import kotlin.collections.contains
 
 
 fun <A:Appendable> A.appendTimes(char:Char, count:Int):A {

@@ -4,6 +4,8 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter
 import java.util.ArrayList
 import java.util.LinkedHashMap
+import kotlin.collections.contains
+import kotlin.collections.isNotEmpty
 
 interface Batcher<T> {
 
