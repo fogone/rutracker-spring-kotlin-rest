@@ -80,7 +80,10 @@
 
     function createItemTemplate(categoryAndTorrents) {
         var result = '<div class="panel panel-default">'+
-                '<div class="panel-heading"><h4>'+categoryAndTorrents.category.name+'</h4></div>' +
+                '<div class="panel-heading">' +
+                '<p>'+categoryAndTorrents.category.parent.name+'</p>' +
+                '<h4>'+categoryAndTorrents.category.name+'</h4>' +
+                '</div>' +
                 '<table class="table table-striped">';
 
         result += categoryAndTorrents.torrents.map(function(item) { return createTorrentTemplate(item) }).join("");

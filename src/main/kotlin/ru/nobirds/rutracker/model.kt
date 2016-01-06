@@ -1,6 +1,8 @@
 package ru.nobirds.rutracker
 
-data class Category(val id:Long, val name:String, val parent:Long = 0)
+data class Category(val id:Long, val name:String, val parent:Category?)
+
+val RootCategory:Category = Category(0, "root", null)
 
 data class Torrent(val id:Long,val categoryId:Long, val hash:String, val name:String, val size:Long, val created:String)
 

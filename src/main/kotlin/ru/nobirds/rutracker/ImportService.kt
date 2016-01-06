@@ -142,7 +142,7 @@ class ImportService(
 
     private fun createCategory(tuple: List<String>, parentId: Long = 0): Category {
         val (id, name) = tuple
-        return Category(id.toLong(), name, parentId)
+        return Category(id.toLong(), name, categoryRepository.findById(parentId))
     }
 
     private fun importTorrents(executor: ExecutorService, directory:Path) {
