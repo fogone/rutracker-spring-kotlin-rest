@@ -5,6 +5,7 @@ import ru.nobirds.rutracker.repository.VersionRepository
 import javax.annotation.PostConstruct
 
 class JdbcVersionRepository(val jdbcTemplate: JdbcTemplate) : VersionRepository {
+
     @PostConstruct
     private fun initialize() {
         createTable()

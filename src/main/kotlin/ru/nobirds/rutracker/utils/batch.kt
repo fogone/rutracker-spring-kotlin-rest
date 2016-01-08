@@ -2,23 +2,33 @@ package ru.nobirds.rutracker.utils
 
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter
+import java.io.Closeable
 import java.util.ArrayList
 import java.util.LinkedHashMap
 import kotlin.collections.contains
 import kotlin.collections.isNotEmpty
 
-interface Batcher<T> {
+interface Batcher<T> : Closeable {
 
     fun add(value:T):Batcher<T>
 
     fun flush()
 
+    override fun close() {
+        flush()
+    }
+
 }
 
-inline fun <T, R> Batcher<T>.use(block:Batcher<T>.()->R) {
-    block()
-    flush()
+/*
+inline fun <T, R> Batcher<T>.use(block:Batcher<T>.()->R):R {
+    try {
+        return block()
+    } finally {
+        flush()
+    }
 }
+*/
 
 abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
 

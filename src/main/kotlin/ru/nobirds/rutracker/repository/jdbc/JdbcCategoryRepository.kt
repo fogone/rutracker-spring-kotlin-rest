@@ -29,10 +29,6 @@ class JdbcCategoryRepository(val jdbcTemplate: JdbcTemplate) : CategoryRepositor
         createTable()
     }
 
-    override fun add(category: Category) {
-        batcher(1).add(category).flush()
-    }
-
     override fun batcher(size:Int): Batcher<Category> {
         return UniqueKeyJdbcBatcher(size.toLong(), "INSERT INTO category (id, name, parent) VALUES (?, ?, ?)",
                 jdbcTemplate, setter, { it.id }, { contains(it) })

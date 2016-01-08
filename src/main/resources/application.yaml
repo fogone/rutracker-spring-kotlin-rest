@@ -1,5 +1,5 @@
 import:
-  ignoreStoredVersions: false
+  ignoreStoredVersions: true
   directory: D:\Torrents\rutracker-torrents
   index: category_info.csv
   # threads: 4

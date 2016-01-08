@@ -10,10 +10,12 @@ import ru.nobirds.rutracker.utils.component6
 import ru.nobirds.rutracker.utils.component7
 import ru.nobirds.rutracker.utils.logger
 import ru.nobirds.rutracker.utils.timed
-import ru.nobirds.rutracker.utils.use
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -25,6 +27,7 @@ import kotlin.collections.component3
 import kotlin.collections.component4
 import kotlin.collections.component5
 import kotlin.collections.map
+import kotlin.concurrent.getOrSet
 import kotlin.sequences.filter
 import kotlin.sequences.forEach
 import kotlin.sequences.map
@@ -43,6 +46,7 @@ class ImportService(
     private val logger:Logger = logger()
 
     private val versionRegex = "\\d+".toRegex()
+    private val dateParser = ThreadLocal<DateFormat>()
 
     private val directory: Path = Paths.get(importProperties.directory)
     private val index:String = importProperties.index
@@ -123,21 +127,23 @@ class ImportService(
     }
 
     private fun importTopCategoryWorker(directory: Path, topCategory: CategoryAndFile):Callable<Unit> = Callable {
-        categoryRepository.batcher(importProperties.categoryBatchSize).use {
+        categoryRepository.batcher(importProperties.categoryBatchSize).use { batcher ->
             parser(directory, topCategory.file).use {
                 it
                         .map { createCategory(it, topCategory.category.id) }
-                        .forEach { add(it) }
+                        .forEach { batcher.add(it) }
             }
         }
     }
 
-    private fun importTopCategories(directory: Path):List<CategoryAndFile> = parser(directory, index).use {
-        it.map {
-            val category = createCategory(it)
-            categoryRepository.add(category)
-            CategoryAndFile(category, it[2])
-        }.toList()
+    private fun importTopCategories(directory: Path):List<CategoryAndFile> = parser(directory, index).use { parser ->
+        categoryRepository.batcher(50).use { batcher ->
+            parser.map {
+                val category = createCategory(it)
+                batcher.add(category)
+                CategoryAndFile(category, it[2])
+            }.toList()
+        }
     }
 
     private fun createCategory(tuple: List<String>, parentId: Long = 0): Category {
@@ -154,10 +160,10 @@ class ImportService(
     }
 
     private fun importTorrentsWorker(directory: Path, file:String):Callable<Unit> = Callable {
-        torrentRepository.batcher(importProperties.torrentBatchSize).use {
+        torrentRepository.batcher(importProperties.torrentBatchSize).use { batcher ->
             parser(directory, file).use {
                 for (tuple in it) {
-                    add(createTorrent(tuple))
+                    batcher.add(createTorrent(tuple))
                 }
             }
         }
@@ -165,8 +171,10 @@ class ImportService(
 
     private fun createTorrent(it: List<String>): Torrent {
         val (categoryId, categoryName, id, hash, name, size, created) = it
-        return Torrent(id.toLong(), categoryId.toLong(), hash, name, size.toLong(), created)
+        return Torrent(id.toLong(), categoryId.toLong(), hash, name, size.toLong(), created.toDate())
     }
+
+    private fun String.toDate(): Date = dateParser.getOrSet { SimpleDateFormat("yyyy-MM-dd HH:mm:ss") }.parse(this)
 
     private fun findContentFiles(directory:Path):List<String> =
             parser(directory, index).use { it.map { it[2] }.toList() }

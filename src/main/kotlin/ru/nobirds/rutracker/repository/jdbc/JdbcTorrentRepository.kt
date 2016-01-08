@@ -7,6 +7,7 @@ import ru.nobirds.rutracker.Torrent
 import ru.nobirds.rutracker.repository.TorrentRepository
 import ru.nobirds.rutracker.utils.Batcher
 import ru.nobirds.rutracker.utils.SimpleJdbcBatcher
+import java.sql.Date
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import javax.annotation.PostConstruct
@@ -21,7 +22,7 @@ class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository 
         Torrent(
                 rs.getLong("id"), rs.getLong("category_id"),
                 rs.getString("hash"), rs.getString("name"),
-                rs.getLong("size"), rs.getString("created")
+                rs.getLong("size"), rs.getDate("created")
         )
     }
 
@@ -32,16 +33,12 @@ class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository 
                 ps.setString(3, t.hash)
                 ps.setString(4, t.name)
                 ps.setLong(5, t.size)
-                ps.setString(6, t.created)
+                ps.setDate(6, Date(t.created.time))
             }
 
     @PostConstruct
     private fun initialize() {
         createTable()
-    }
-
-    override fun add(torrent: Torrent) {
-        batcher(1).add(torrent).flush()
     }
 
     override fun batcher(size:Int): Batcher<Torrent> {
