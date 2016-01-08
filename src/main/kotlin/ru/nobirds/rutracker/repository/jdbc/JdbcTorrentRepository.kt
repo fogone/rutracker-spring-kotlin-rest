@@ -62,8 +62,7 @@ class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository 
     }
 
     override fun clear() {
-        dropTable()
-        createTable()
+        jdbcTemplate.update("TRUNCATE TABLE torrent")
     }
 
     override fun count(): Int {
@@ -74,7 +73,4 @@ class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository 
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS torrent (id BIGINT PRIMARY KEY, category_id BIGINT, hash VARCHAR, name VARCHAR, size BIGINT, created VARCHAR)")
     }
 
-    private fun dropTable() {
-        jdbcTemplate.update("DROP TABLE torrent")
-    }
 }

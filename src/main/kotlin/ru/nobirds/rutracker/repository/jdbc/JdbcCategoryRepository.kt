@@ -46,12 +46,7 @@ class JdbcCategoryRepository(val jdbcTemplate: JdbcTemplate) : CategoryRepositor
     }
 
     override fun clear() {
-        dropTable()
-        createTable()
-    }
-
-    private fun dropTable() {
-        jdbcTemplate.update("DROP TABLE category")
+        jdbcTemplate.update("TRUNCATE TABLE category")
     }
 
     private fun createTable() {

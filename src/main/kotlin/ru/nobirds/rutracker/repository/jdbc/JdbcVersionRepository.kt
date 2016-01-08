@@ -20,16 +20,11 @@ class JdbcVersionRepository(val jdbcTemplate: JdbcTemplate) : VersionRepository 
     }
 
     override fun clear() {
-        dropTable()
-        createTable()
+        jdbcTemplate.update("TRUNCATE TABLE base_version")
     }
 
     private fun createTable() {
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS base_version (version BIGINT PRIMARY KEY)")
-    }
-
-    private fun dropTable() {
-        jdbcTemplate.update("DROP TABLE base_version")
     }
 
 }
