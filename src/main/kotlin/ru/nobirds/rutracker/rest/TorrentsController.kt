@@ -5,30 +5,25 @@ import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import ru.nobirds.rutracker.CategoryAndTorrents
-import ru.nobirds.rutracker.Torrent
 import ru.nobirds.rutracker.repository.CategoryRepository
 import ru.nobirds.rutracker.repository.TorrentRepository
 import kotlin.collections.asSequence
-import kotlin.collections.emptyList
 import kotlin.collections.map
 import kotlin.collections.sortedBy
 import kotlin.collections.toList
 import kotlin.sequences.groupBy
-import kotlin.text.isEmpty
 
 @RequestMapping("/api/torrents")
 class TorrentsController(val torrentRepository: TorrentRepository, val categoryRepository: CategoryRepository) {
 
     @ResponseBody
     @RequestMapping(method = arrayOf(RequestMethod.GET))
-    fun find(@RequestParam name:String):List<CategoryAndTorrents> {
-        return torrentRepository.search(name).groupByCategory(categoryRepository)
-    }
+    fun find(@RequestParam name:String):List<CategoryAndTorrents> = torrentRepository
+            .search(name)
+            .asSequence()
+            .groupBy { it.categoryId }
+            .map { CategoryAndTorrents(categoryRepository.findById(it.key)!!, it.value.sortedBy { it.name }) }
+            .sortedBy { it.category.name }
+            .toList()
 
 }
-
-fun List<Torrent>.groupByCategory(categoryRepository: CategoryRepository):List<CategoryAndTorrents> = asSequence()
-        .groupBy { it.categoryId }
-        .map { CategoryAndTorrents(categoryRepository.findById(it.key)!!, it.value.sortedBy { it.name }) }
-        .sortedBy { it.category.name }
-        .toList()

@@ -6,6 +6,7 @@ import ru.nobirds.rutracker.repository.CategoryRepository
 import ru.nobirds.rutracker.repository.TorrentRepository
 import ru.nobirds.rutracker.repository.VersionRepository
 import ru.nobirds.rutracker.utils.CsvParser
+import ru.nobirds.rutracker.utils.and
 import ru.nobirds.rutracker.utils.component6
 import ru.nobirds.rutracker.utils.component7
 import ru.nobirds.rutracker.utils.logger
@@ -75,7 +76,7 @@ class ImportService(
         }
     }
 
-    private fun updateEntities(directory: Path):Int = withExecutor { executor ->
+    private fun updateEntities(directory: Path):Int {
         val clearTime = timed {
             versionRepository.clear()
             categoryRepository.clear()
@@ -84,21 +85,16 @@ class ImportService(
 
         logger.info("Old data clean in {} secs", clearTime/1000f)
 
-        val categoriesImportTime = timed {
-            importCategories(executor, directory)
+        val importTime = timed {
+            importCategoriesAndTorrents(directory)
         }
 
-        logger.info("Categories imported. Total {} in {} secs", categoryRepository.count(), categoriesImportTime/1000f)
-
-        val torrentsImportTime = timed {
-            importTorrents(executor, directory)
-        }
-
+        val categoriesCount = categoryRepository.count()
         val torrentsCount = torrentRepository.count()
 
-        logger.info("Torrents imported. Total {} in {} secs", torrentsCount, torrentsImportTime/1000f)
+        logger.info("Categories and torrents imported. Total {} and {} in {} secs", categoriesCount, torrentsCount, importTime/1000f)
 
-        torrentsCount
+        return torrentsCount
     }
 
     private inline fun <R> withExecutor(block:(ExecutorService)->R):R {
@@ -118,20 +114,26 @@ class ImportService(
                 .maxBy { it.fileName.toString().toLong() }
     }
 
-    private fun importCategories(executor: ExecutorService, directory:Path) {
+    private fun importCategoriesAndTorrents(directory:Path) = withExecutor { executor ->
         val topCategories = importTopCategories(directory)
 
         executor
-                .invokeAll(topCategories.map { importTopCategoryWorker(directory, it) })
+                .invokeAll(topCategories.map { createImportFileWorker(directory, it) })
                 .map { it.get() }
     }
 
-    private fun importTopCategoryWorker(directory: Path, topCategory: CategoryAndFile):Callable<Unit> = Callable {
-        categoryRepository.batcher(importProperties.categoryBatchSize).use { batcher ->
+    private fun createImportFileWorker(directory: Path, topCategory: CategoryAndFile):Callable<Unit> = Callable {
+        val categoryBatcher = categoryRepository.batcher(importProperties.categoryBatchSize)
+        val torrentBatcher = torrentRepository.batcher(importProperties.torrentBatchSize)
+
+        (categoryBatcher and torrentBatcher).use {
             parser(directory, topCategory.file).use {
                 it
-                        .map { createCategory(it, topCategory.category.id) }
-                        .forEach { batcher.add(it) }
+                        .map { createCategoryAndTorrent(topCategory.category, it) }
+                        .forEach {
+                            categoryBatcher.add(it.category)
+                            torrentBatcher.add(it.torrent)
+                        }
             }
         }
     }
@@ -139,51 +141,34 @@ class ImportService(
     private fun importTopCategories(directory: Path):List<CategoryAndFile> = parser(directory, index).use { parser ->
         categoryRepository.batcher(50).use { batcher ->
             parser.map {
-                val category = createCategory(it)
+                val category = createTopCategory(it)
                 batcher.add(category)
                 CategoryAndFile(category, it[2])
             }.toList()
         }
     }
 
-    private fun createCategory(tuple: List<String>, parentId: Long = 0): Category {
+    private fun createTopCategory(tuple: List<String>): Category {
         val (id, name) = tuple
-        return Category(id.toLong(), name, categoryRepository.findById(parentId))
+        return Category(id.toLong(), name, RootCategory)
     }
 
-    private fun importTorrents(executor: ExecutorService, directory:Path) {
-        val contentFiles = findContentFiles(directory)
-
-        executor
-                .invokeAll(contentFiles.map { importTorrentsWorker(directory, it) })
-                .map { it.get() }
-    }
-
-    private fun importTorrentsWorker(directory: Path, file:String):Callable<Unit> = Callable {
-        torrentRepository.batcher(importProperties.torrentBatchSize).use { batcher ->
-            parser(directory, file).use {
-                for (tuple in it) {
-                    batcher.add(createTorrent(tuple))
-                }
-            }
-        }
-    }
-
-    private fun createTorrent(it: List<String>): Torrent {
+    private fun createCategoryAndTorrent(parent: Category, it: List<String>): CategoryAndTorrent {
         val (categoryId, categoryName, id, hash, name, size, created) = it
-        return Torrent(id.toLong(), categoryId.toLong(), hash, name, size.toLong(), created.toDate())
+        return CategoryAndTorrent(
+                Category(categoryId.toLong(), categoryName, parent),
+                Torrent(id.toLong(), categoryId.toLong(), hash, name, size.toLong(), created.toDate())
+        )
     }
 
     private fun String.toDate(): Date = dateParser.getOrSet { SimpleDateFormat("yyyy-MM-dd HH:mm:ss") }.parse(this)
-
-    private fun findContentFiles(directory:Path):List<String> =
-            parser(directory, index).use { it.map { it[2] }.toList() }
 
     private fun parser(path: Path, name: String): CsvParser {
         return CsvParser(Files.newBufferedReader(path.resolve(name)))
     }
 
     internal data class CategoryAndFile(val category: Category, val file:String)
+    internal data class CategoryAndTorrent(val category: Category, val torrent: Torrent)
 
     @PostConstruct
     fun handleApplicationStartedEvent() {
