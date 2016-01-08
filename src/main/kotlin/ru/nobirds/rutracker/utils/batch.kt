@@ -10,45 +10,31 @@ import kotlin.collections.isNotEmpty
 
 interface Batcher<T> : Closeable {
 
-    fun add(value:T):Batcher<T>
-
-    fun flush()
-
-    override fun close() {
-        flush()
-    }
+    fun add(value:T)
 
 }
-
-/*
-inline fun <T, R> Batcher<T>.use(block:Batcher<T>.()->R):R {
-    try {
-        return block()
-    } finally {
-        flush()
-    }
-}
-*/
 
 abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
 
     private val batch = ArrayList<T>()
 
-    override fun add(value: T):Batcher<T> {
+    override fun add(value: T) {
         batch.add(value)
 
         if (batch.size == batchSize.toInt()) {
             flush()
         }
-
-        return this
     }
 
-    override fun flush() {
+    private fun flush() {
         if (batch.isNotEmpty()) {
             flushImpl(batch)
             batch.clear()
         }
+    }
+
+    override fun close() {
+        flush()
     }
 
     abstract fun flushImpl(batch: List<T>)
@@ -74,7 +60,7 @@ class UniqueKeyJdbcBatcher<K, T>(val batchSize:Long,
 
     private val batch = LinkedHashMap<K, T>()
 
-    override fun add(value: T): Batcher<T> {
+    override fun add(value: T) {
         val key = fetcher(value)
 
         if (key !in batch && !checker(key)) {
@@ -83,15 +69,17 @@ class UniqueKeyJdbcBatcher<K, T>(val batchSize:Long,
                 flush()
             }
         }
-
-        return this
     }
 
-    override fun flush() {
+    private fun flush() {
         if (batch.isNotEmpty()) {
             jdbcTemplate.batchUpdate(sql, batch.values, batch.size, setter)
             batch.clear()
         }
+    }
+
+    override fun close() {
+        flush()
     }
 
 }
