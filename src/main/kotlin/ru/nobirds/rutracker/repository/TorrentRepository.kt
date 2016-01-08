@@ -5,13 +5,7 @@ import ru.nobirds.rutracker.utils.Batcher
 
 interface TorrentRepository {
 
-    fun contains(id:Long):Boolean
-
-    fun findById(id:Long): Torrent?
-
-    fun findByName(name:String):List<Torrent>
-
-    fun findByName(name:String, categoryId:Long):List<Torrent>
+    fun search(name:String):List<Torrent>
 
     fun clear()
 

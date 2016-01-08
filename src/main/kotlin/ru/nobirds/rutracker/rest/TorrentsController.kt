@@ -21,14 +21,8 @@ class TorrentsController(val torrentRepository: TorrentRepository, val categoryR
 
     @ResponseBody
     @RequestMapping(method = arrayOf(RequestMethod.GET))
-    fun find(@RequestParam name:String, @RequestParam(required = false) categoryId:Long?):List<CategoryAndTorrents> {
-        if(name.isEmpty())
-            return emptyList()
-
-        return if(categoryId != null)
-            torrentRepository.findByName(name, categoryId).groupByCategory(categoryRepository)
-        else
-            torrentRepository.findByName(name).groupByCategory(categoryRepository)
+    fun find(@RequestParam name:String):List<CategoryAndTorrents> {
+        return torrentRepository.search(name).groupByCategory(categoryRepository)
     }
 
 }

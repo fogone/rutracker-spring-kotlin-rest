@@ -9,8 +9,6 @@ interface CategoryRepository {
 
     fun findById(id:Long): Category?
 
-    fun all():List<Category>
-
     fun count():Int
 
     fun clear()

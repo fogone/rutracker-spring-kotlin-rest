@@ -41,10 +41,6 @@ class JdbcCategoryRepository(val jdbcTemplate: JdbcTemplate) : CategoryRepositor
     override fun findById(id: Long): Category? = if (id != 0L)
         jdbcTemplate.queryForObject("SELECT id, name, parent FROM category WHERE id = ?", rowMapper, id) else RootCategory
 
-    override fun all(): List<Category> {
-        return jdbcTemplate.query("SELECT id, name, parent FROM category", rowMapper)
-    }
-
     override fun count(): Int {
         return jdbcTemplate.queryForObject("SELECT count(id) FROM category", Int::class.java)
     }

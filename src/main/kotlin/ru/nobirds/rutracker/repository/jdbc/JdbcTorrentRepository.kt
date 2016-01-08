@@ -11,9 +11,11 @@ import java.sql.Date
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import javax.annotation.PostConstruct
+import kotlin.collections.emptyList
 import kotlin.collections.joinToString
 import kotlin.collections.map
 import kotlin.collections.toTypedArray
+import kotlin.text.isEmpty
 import kotlin.text.split
 import kotlin.text.trim
 
@@ -46,19 +48,10 @@ class JdbcTorrentRepository(val jdbcTemplate: JdbcTemplate) : TorrentRepository 
                 size.toLong(), "INSERT INTO torrent (id, category_id, hash, name, size, created) VALUES (?, ?, ?, ?, ?, ?)", jdbcTemplate, setter)
     }
 
-    override fun contains(id: Long): Boolean {
-        return jdbcTemplate.queryForObject("SELECT count(id) FROM torrent WHERE id = ?", Int::class.java, id) > 0
-    }
+    override fun search(name: String): List<Torrent> {
+        if(name.isEmpty())
+            return emptyList()
 
-    override fun findById(id: Long): Torrent? {
-        return jdbcTemplate.queryForObject("SELECT id, category_id, hash, name, size, created FROM torrent WHERE id = ?", rowMapper, id)
-    }
-
-    override fun findByName(name: String, categoryId: Long): List<Torrent> {
-        return jdbcTemplate.query("SELECT id, category_id, hash, name, size, created FROM torrent WHERE name like ? and category_id = ?", rowMapper, "%$name%", categoryId)
-    }
-
-    override fun findByName(name: String): List<Torrent> {
         val parts = name.split(" ")
 
         val whereSql = parts.map { "UPPER(name) like UPPER(?)" }.joinToString(" AND ")
