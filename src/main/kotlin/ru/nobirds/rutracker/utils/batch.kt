@@ -41,7 +41,7 @@ abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
 
 }
 
-open class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
+class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
                            val jdbcTemplate: JdbcTemplate,
                            val setter:ParameterizedPreparedStatementSetter<T>) : AbstractBatcher<T>(batchSize) {
 
@@ -51,7 +51,7 @@ open class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
 
 }
 
-class UniqueKeyJdbcBatcherWrapper<K, T>(
+class UniqueKeyBatcherWrapper<K, T>(
         val batcher:Batcher<T>,
         val keyFetcher: (T)->K,
         val uniqueChecker:(K)->Boolean) : Batcher<T> {
@@ -75,4 +75,4 @@ class UniqueKeyJdbcBatcherWrapper<K, T>(
 }
 
 fun <T, K> Batcher<T>.withUniqueKeys(keyFetcher: (T)->K, uniqueChecker:(K)->Boolean):Batcher<T>
-        = UniqueKeyJdbcBatcherWrapper(this, keyFetcher, uniqueChecker)
+        = UniqueKeyBatcherWrapper(this, keyFetcher, uniqueChecker)
