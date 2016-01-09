@@ -3,9 +3,8 @@ package ru.nobirds.rutracker.utils
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter
 import java.io.Closeable
-import java.util.ArrayList
-import java.util.LinkedHashMap
-import kotlin.collections.contains
+import java.util.*
+import kotlin.collections.hashSetOf
 import kotlin.collections.isNotEmpty
 
 interface Batcher<T> : Closeable {
@@ -14,11 +13,23 @@ interface Batcher<T> : Closeable {
 
 }
 
-abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
+interface FilteringBatcher<T> : Batcher<T> {
+
+    fun filter(value:T): Boolean {
+        return true
+    }
+
+}
+
+abstract open class AbstractBatcher<T>(val batchSize:Long) : FilteringBatcher<T> {
 
     private val batch = ArrayList<T>()
 
     override fun add(value: T) {
+        if (!filter(value)) {
+            return
+        }
+
         batch.add(value)
 
         if (batch.size == batchSize.toInt()) {
@@ -26,7 +37,7 @@ abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
         }
     }
 
-    private fun flush() {
+    protected open fun flush() {
         if (batch.isNotEmpty()) {
             flushImpl(batch)
             batch.clear()
@@ -41,7 +52,7 @@ abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
 
 }
 
-class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
+open class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
                            val jdbcTemplate: JdbcTemplate,
                            val setter:ParameterizedPreparedStatementSetter<T>) : AbstractBatcher<T>(batchSize) {
 
@@ -51,36 +62,29 @@ class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
 
 }
 
-class UniqueKeyJdbcBatcher<K, T>(val batchSize:Long,
-                                 val sql: String,
-                                 val jdbcTemplate: JdbcTemplate,
-                                 val setter:ParameterizedPreparedStatementSetter<T>,
+class UniqueKeyJdbcBatcher<K, T>(batchSize:Long,
+                                 sql: String,
+                                 jdbcTemplate: JdbcTemplate,
+                                 setter:ParameterizedPreparedStatementSetter<T>,
                                  val fetcher: (T)->K,
-                                 val checker:(K)->Boolean) : Batcher<T> {
+                                 val checker:(K)->Boolean) : SimpleJdbcBatcher<T>(batchSize, sql, jdbcTemplate, setter) {
 
-    private val batch = LinkedHashMap<K, T>()
+    private val keys = hashSetOf<K>()
 
-    override fun add(value: T) {
+    override fun filter(value: T): Boolean {
         val key = fetcher(value)
 
-        if (key !in batch && !checker(key)) {
-            batch.put(key, value)
-            if (batch.size == batchSize.toInt()) {
-                flush()
-            }
+        return if (key in keys || checker(key)) {
+            false
+        } else {
+            keys.add(key)
+            true
         }
     }
 
-    private fun flush() {
-        if (batch.isNotEmpty()) {
-            jdbcTemplate.batchUpdate(sql, batch.values, batch.size, setter)
-            batch.clear()
-        }
-    }
-
-    override fun close() {
-        flush()
+    override protected fun flush() {
+        super.flush()
+        keys.clear()
     }
 
 }
-
