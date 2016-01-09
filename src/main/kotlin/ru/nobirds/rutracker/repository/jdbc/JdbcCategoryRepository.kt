@@ -7,7 +7,8 @@ import ru.nobirds.rutracker.Category
 import ru.nobirds.rutracker.RootCategory
 import ru.nobirds.rutracker.repository.CategoryRepository
 import ru.nobirds.rutracker.utils.Batcher
-import ru.nobirds.rutracker.utils.UniqueKeyJdbcBatcher
+import ru.nobirds.rutracker.utils.SimpleJdbcBatcher
+import ru.nobirds.rutracker.utils.withUniqueKeys
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import javax.annotation.PostConstruct
@@ -29,10 +30,9 @@ class JdbcCategoryRepository(val jdbcTemplate: JdbcTemplate) : CategoryRepositor
         createTable()
     }
 
-    override fun batcher(size:Int): Batcher<Category> {
-        return UniqueKeyJdbcBatcher(size.toLong(), "INSERT INTO category (id, name, parent) VALUES (?, ?, ?)",
-                jdbcTemplate, setter, { it.id }, { contains(it) })
-    }
+    override fun batcher(size:Int): Batcher<Category> =
+            SimpleJdbcBatcher(size.toLong(), "INSERT INTO category (id, name, parent) VALUES (?, ?, ?)", jdbcTemplate, setter)
+                    .withUniqueKeys(Category::id) { contains(it) }
 
     override fun contains(id: Long): Boolean {
         return jdbcTemplate.queryForObject("SELECT count(id) FROM category WHERE id = ?", Long::class.java, id) > 0

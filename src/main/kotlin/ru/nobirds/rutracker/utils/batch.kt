@@ -4,14 +4,18 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter
 import java.io.Closeable
 import java.util.ArrayList
-import java.util.LinkedHashMap
-import kotlin.collections.contains
+import java.util.HashSet
 import kotlin.collections.isNotEmpty
 
 interface Batcher<T> : Closeable {
 
     fun add(value:T)
 
+    fun flush()
+
+    override fun close() {
+        flush()
+    }
 }
 
 abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
@@ -26,22 +30,18 @@ abstract class AbstractBatcher<T>(val batchSize:Long) : Batcher<T> {
         }
     }
 
-    private fun flush() {
+    override fun flush() {
         if (batch.isNotEmpty()) {
             flushImpl(batch)
             batch.clear()
         }
     }
 
-    override fun close() {
-        flush()
-    }
-
     abstract fun flushImpl(batch: List<T>)
 
 }
 
-class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
+open class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
                            val jdbcTemplate: JdbcTemplate,
                            val setter:ParameterizedPreparedStatementSetter<T>) : AbstractBatcher<T>(batchSize) {
 
@@ -51,36 +51,28 @@ class SimpleJdbcBatcher<T>(batchSize:Long, val sql: String,
 
 }
 
-class UniqueKeyJdbcBatcher<K, T>(val batchSize:Long,
-                                 val sql: String,
-                                 val jdbcTemplate: JdbcTemplate,
-                                 val setter:ParameterizedPreparedStatementSetter<T>,
-                                 val fetcher: (T)->K,
-                                 val checker:(K)->Boolean) : Batcher<T> {
+class UniqueKeyJdbcBatcherWrapper<K, T>(
+        val batcher:Batcher<T>,
+        val keyFetcher: (T)->K,
+        val uniqueChecker:(K)->Boolean) : Batcher<T> {
 
-    private val batch = LinkedHashMap<K, T>()
+    private val keys = HashSet<K>()
 
     override fun add(value: T) {
-        val key = fetcher(value)
-
-        if (key !in batch && !checker(key)) {
-            batch.put(key, value)
-            if (batch.size == batchSize.toInt()) {
-                flush()
-            }
+        val key = keyFetcher(value)
+        if (isUnique(key)) {
+            batcher.add(value)
+            keys.add(key)
         }
     }
 
-    private fun flush() {
-        if (batch.isNotEmpty()) {
-            jdbcTemplate.batchUpdate(sql, batch.values, batch.size, setter)
-            batch.clear()
-        }
-    }
+    private fun isUnique(key: K): Boolean = key !in keys && !uniqueChecker(key)
 
-    override fun close() {
-        flush()
+    override fun flush() {
+        batcher.flush()
+        keys.clear()
     }
-
 }
 
+fun <T, K> Batcher<T>.withUniqueKeys(keyFetcher: (T)->K, uniqueChecker:(K)->Boolean):Batcher<T>
+        = UniqueKeyJdbcBatcherWrapper(this, keyFetcher, uniqueChecker)
