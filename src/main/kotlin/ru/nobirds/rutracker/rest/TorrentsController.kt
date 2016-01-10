@@ -13,10 +13,10 @@ import kotlin.collections.sortedBy
 import kotlin.collections.toList
 import kotlin.sequences.groupBy
 
+@ResponseBody
 @RequestMapping("/api/torrents")
 class TorrentsController(val torrentRepository: TorrentRepository, val categoryRepository: CategoryRepository) {
 
-    @ResponseBody
     @RequestMapping(method = arrayOf(RequestMethod.GET))
     fun find(@RequestParam name:String):List<CategoryAndTorrents> = torrentRepository
             .search(name)

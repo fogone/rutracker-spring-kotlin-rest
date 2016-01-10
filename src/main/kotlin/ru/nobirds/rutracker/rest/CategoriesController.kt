@@ -7,10 +7,10 @@ import org.springframework.web.bind.annotation.ResponseBody
 import ru.nobirds.rutracker.Category
 import ru.nobirds.rutracker.repository.CategoryRepository
 
+@ResponseBody
 @RequestMapping("/api/categories")
 class CategoriesController(val categoryRepository: CategoryRepository) {
 
-    @ResponseBody
     @RequestMapping(method = arrayOf(RequestMethod.GET))
     fun find(@RequestParam id:Long):Category {
         val category = categoryRepository.findById(id)
